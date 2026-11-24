@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="so">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TAMAL | Customer & Admin Portal</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--red:#d71920;--ink:#111923;--muted:#657181;--bg:#f4f6f9;--line:#e0e6ee;--green:#12864d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px Arial,sans-serif;color:var(--ink)}header{background:#fff;border-bottom:1px solid var(--line);padding:14px 0}.wrap{width:min(1100px,94%);margin:auto}.brand{font-size:27px;font-weight:900;letter-spacing:2px}.brand span{color:var(--red)}.top{display:flex;justify-content:space-between;align-items:center;gap:10px}.card{background:white;border:1px solid var(--line);border-radius:16px;padding:20px;margin:18px 0;box-shadow:0 8px 22px #15253b08}.narrow{max-width:480px;margin:45px auto}.hidden{display:none!important}h1,h2,h3{margin-top:0}label{display:block;font-weight:bold;font-size:13px;margin:12px 0 6px}input,select,textarea{width:100%;padding:12px;border:1px solid #cbd4df;border-radius:9px;font-size:15px;background:white}button,.btn{background:var(--red);border:0;color:white;padding:11px 16px;border-radius:9px;font-weight:bold;cursor:pointer;display:inline-block}button.secondary{background:#e9eef4;color:var(--ink)}button.green{background:var(--green)}button:disabled{opacity:.5;cursor:not-allowed}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.muted{color:var(--muted);font-size:13px}.tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{background:#e9eef4;color:var(--ink)}.tabs button.active{background:var(--red);color:white}.stat{background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:12px}.stat b{font-size:24px;display:block}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:650px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);font-size:13px}th{background:#f8fafc}.status{font-weight:bold}.danger{color:#b42318}.ok{color:#12864d}.note{background:#fff7e6;border:1px solid #f2d59a;padding:12px;border-radius:10px;font-size:13px}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{padding:7px 10px;font-size:12px}.toast{padding:10px;border-radius:9px;margin:12px 0;background:#e8f5ed;color:#135b34}.error{background:#fdecec;color:#9d1c1c}.right{display:flex;gap:8px;align-items:center}@media(max-width:700px){.grid{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}.card{padding:15px}.top{align-items:flex-start}}@media(max-width:430px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="wrap top"><div class="brand">T<span>A</span>MAL.</div><div class="right"><span id="who" class="muted"></span><button id="logout" class="secondary hidden">Ka bax</button></div></div></header>
+<main class="wrap">
+<div id="setup" class="card narrow hidden">
+<h2>Dejinta TAMAL</h2><p>Xogta mashruuca TAMAL horay ayaa loogu daray. Haddii boggani kuu muuqdo, dib u hubi internetka ama geli Project URL iyo Publishable Key mar kale.</p>
+<label>Supabase Project URL</label><input id="url" placeholder="https://xxxx.supabase.co">
+<label>Supabase anon/public key</label><input id="key" placeholder="Supabase anon key">
+<button id="saveConfig">Kaydi oo sii wad</button>
+<p class="muted">Furaha anon waa public key. Waligaa ha gelin service_role key halkan.</p>
+</div>
+
+<div id="auth" class="card narrow hidden">
+<div class="tabs"><button class="active" data-auth="login">Soo gal</button><button data-auth="signup">Akoon samee</button></div>
+<div id="authMsg"></div>
+<label>Email</label><input id="email" type="email" autocomplete="username">
+<label>Password (ugu yaraan 8 xaraf)</label><input id="password" type="password" autocomplete="current-password">
+<button id="authGo" style="width:100%;margin-top:15px">Sii wad</button>
+<p class="muted">Akoonku wuxuu u baahan yahay email iyo password; PIN-ka 4-ta lambar ah waa quful dheeraad ah oo lagu weydiinayo marka dashboard-ka la furayo.</p>
+</div>
+
+<div id="pinSetup" class="card narrow hidden">
+<h2>Samee PIN-kaaga</h2><p>Dooro PIN 4 lambar ah. Ha isticmaalin 1234 ama 0000.</p>
+<label>PIN cusub</label><input id="newPin" inputmode="numeric" maxlength="4" type="password">
+<label>Ku celi PIN-ka</label><input id="newPin2" inputmode="numeric" maxlength="4" type="password">
+<button id="savePin" style="width:100%">Kaydi PIN</button><div id="pinSetupMsg"></div>
+</div>
+<div id="pinGate" class="card narrow hidden">
+<h2>Geli PIN-ka TAMAL</h2><p>PIN-ka 4-ta lambar ah ayaa loo baahan yahay si dashboard-ka loo furo.</p>
+<label>PIN</label><input id="pin" inputmode="numeric" maxlength="4" type="password">
+<button id="unlock" style="width:100%">Fur dashboard</button><div id="pinMsg"></div>
+</div>
+
+<div id="app" class="hidden">
+<div class="card">
+<div class="top"><div><h2 id="welcome">TAMAL Dashboard</h2><p class="muted">Dalabkaaga ku samee gudaha website-ka. WhatsApp looma baahna si dalab loo gudbiyo.</p></div><span id="roleBadge" class="status"></span></div>
+<div id="customerView">
+<h3>Samee dalab cusub</h3>
+<div class="two">
+<div><label>Waxaan dirayaa</label><select id="fromAsset"><option>USDT</option><option>USD</option><option>PayPal</option><option>EVC Plus</option><option>E-Dahab</option><option>Zaad</option><option>Sahal</option><option>Golis</option><option>Somnet</option><option>Other Crypto</option></select></div>
+<div><label>Waxaan rabaa</label><select id="toAsset"><option>EVC Plus</option><option>USDT</option><option>USD</option><option>E-Dahab</option><option>Zaad</option><option>Sahal</option><option>Golis</option><option>Somnet</option><option>PayPal</option><option>Other Crypto</option></select></div>
+</div>
+<div class="two"><div><label>Qadarka aan dirayo</label><input id="amount" type="number" min="0.01" step="0.01" placeholder="100"></div><div><label>Network (haddii crypto)</label><select id="network"><option>Ma khusayso</option><option>TRC20</option><option>BEP20</option><option>ERC20</option><option>Other - confirm</option></select></div></div>
+<label>Lambarka ama wallet address-ka qaataha</label><input id="recipient" placeholder="Lambarka mobile money ama wallet address">
+<label>Faahfaahin dheeraad ah (ikhtiyaari)</label><textarea id="details" rows="2"></textarea>
+<button id="placeOrder" class="green">Gudbi dalabka</button><div id="orderMsg"></div>
+</div>
+<div id="adminView" class="hidden">
+<div class="grid" id="stats"></div>
+<div class="tabs" style="margin:18px 0"><button class="active" data-admin="orders">Dalabaadka</button><button data-admin="rates">Qiimaha & khidmadaha</button><button data-admin="users">Users & shaqaale</button></div>
+<div id="adminOrders"><h3>Dhammaan dalabaadka</h3><div class="tablewrap"><table><thead><tr><th>Taariikh</th><th>Macmiil</th><th>Diraya</th><th>Helaya</th><th>Qadar</th><th>Xaalad</th><th>Ficil</th></tr></thead><tbody id="ordersBody"></tbody></table></div></div>
+<div id="adminRates" class="hidden"><h3>Maamul qiimaha sarifka</h3><p class="muted">Ku dar jihada sarifka, rate iyo fee. Qiimaha waxaa loo adeegsan karaa qiyaas; xaqiiji ka hor fulinta.</p>
+<div class="two"><div><label>From</label><select id="rateFrom"><option>USDT</option><option>USD</option><option>PayPal</option><option>EVC Plus</option><option>E-Dahab</option><option>Zaad</option><option>Sahal</option><option>Golis</option><option>Somnet</option><option>Other Crypto</option></select></div><div><label>To</label><select id="rateTo"><option>EVC Plus</option><option>USDT</option><option>USD</option><option>E-Dahab</option><option>Zaad</option><option>Sahal</option><option>Golis</option><option>Somnet</option><option>PayPal</option><option>Other Crypto</option></select></div></div>
+<div class="two"><div><label>Rate (1 unit From = ? To)</label><input id="rateValue" type="number" step="0.000001" min="0"></div><div><label>Fee %</label><input id="feeValue" type="number" step="0.01" min="0" max="100"></div></div><button id="saveRate">Kaydi rate</button><div class="tablewrap"><table><thead><tr><th>From</th><th>To</th><th>Rate</th><th>Fee %</th><th>Update</th></tr></thead><tbody id="ratesBody"></tbody></table></div></div>
+<div id="adminUsers" class="hidden"><h3>Users & shaqaale</h3><p class="muted">Adiga oo owner/admin ah ayaa awood u leh inaad shaqaale u dallacsiiso ama awoodda ka qaaddo. Ku dar email-ka qofka marka uu marka hore account sameysto.</p>
+<label>Email-ka user-ka</label><input id="staffEmail" type="email" placeholder="staff@example.com"><label>Role</label><select id="staffRole"><option value="staff">Shaqaale (staff)</option><option value="customer">Macmiil (customer)</option></select><button id="setRole">Cusboonaysii role</button><div id="userMsg"></div><div class="tablewrap"><table><thead><tr><th>Email</th><th>Role</th><th>La sameeyay</th></tr></thead><tbody id="usersBody"></tbody></table></div></div>
+</div>
+<div id="customerOrders"><h3>Dalabadyadayda</h3><div class="tablewrap"><table><thead><tr><th>Taariikh</th><th>Diraya</th><th>Helaya</th><th>Qadar</th><th>Xaalad</th><th>Faahfaahin</th></tr></thead><tbody id="myOrders"></tbody></table></div></div>
+</div>
+</div>
+<div id="globalMsg"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let sb=null, mode='login', role='customer', profile=null, unlocked=false;
+const cfg=JSON.parse(localStorage.getItem('tamal_cfg')||'null')||{url:'https://peozafoxwycjareoexkq.supabase.co',key:'sb_publishable_HSDiVJuamI5dL3mC-9cuuw_wOmO1wvd'};
+if(!localStorage.getItem('tamal_cfg'))localStorage.setItem('tamal_cfg',JSON.stringify(cfg));
+function msg(id,text,error=false){$(id).innerHTML=`<div class="${error?'toast error':'toast'}">${text}</div>`}
+function show(id){['setup','auth','pinSetup','pinGate','app'].forEach(x=>$(x).classList.add('hidden'));$(id).classList.remove('hidden')}
+function init(){
+  if(!cfg || !cfg.url || !cfg.key){show('setup');return;}
+  if(!window.supabase || !window.supabase.createClient){show('setup');msg('globalMsg','Supabase JavaScript lama soo degin. Hubi internetka, kadib dib u fur bogga.',true);return;}
+  try {
+    sb=window.supabase.createClient(cfg.url,cfg.key);
+    sb.auth.getSession().then(({data,error})=>{
+      if(error){show('auth');msg('authMsg','Xiriirka Supabase wuxuu u baahan yahay in dib loo tijaabiyo: '+error.message,true);return;}
+      data.session?afterLogin():show('auth');
+    }).catch(e=>{show('auth');msg('authMsg','Khalad xiriir: '+e.message,true);});
+  } catch(e) { show('setup'); msg('globalMsg','Supabase lama bilaabi karin: '+e.message,true); }
+}
+$('saveConfig').onclick=()=>{const c={url:$('url').value.trim(),key:$('key').value.trim()};if(!c.url||!c.key)return alert('Geli Supabase URL iyo anon key');localStorage.setItem('tamal_cfg',JSON.stringify(c));location.reload()};
+document.querySelectorAll('[data-auth]').forEach(b=>b.onclick=()=>{mode=b.dataset.auth;document.querySelectorAll('[data-auth]').forEach(x=>x.classList.toggle('active',x===b));$('authGo').textContent=mode==='login'?'Soo gal':'Samee account'});
+$('authGo').onclick=async()=>{const email=$('email').value.trim(),password=$('password').value;if(!email||!password)return msg('authMsg','Geli email iyo password.',true);let r=mode==='login'?await sb.auth.signInWithPassword({email,password}):await sb.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}});if(r.error)return msg('authMsg',r.error.message,true);if(mode==='signup'&&!r.data.session)return msg('authMsg','Akoon waa la sameeyay. Ka xaqiiji email-kaaga, kadib soo gal.');afterLogin()};
+async function afterLogin(){const {data:{user}}=await sb.auth.getUser();if(!user)return show('auth');const {data:p,error}=await sb.from('profiles').select('*').eq('id',user.id).single();if(error||!p){msg('globalMsg','Profile lama helin. Hubi database setup SQL.',true);show('auth');return}profile=p;role=p.role; $('who').textContent=user.email;$('logout').classList.remove('hidden');if(!p.pin_hash){show('pinSetup')}else{show('pinGate')}}
+$('savePin').onclick=async()=>{const a=$('newPin').value,b=$('newPin2').value;if(!/^\d{4}$/.test(a)||a!==b)return msg('pinSetupMsg','PIN-ku waa inuu noqdaa 4 lambar oo isku mid ah.',true);const {error}=await sb.rpc('set_my_pin',{p_pin:a});if(error)return msg('pinSetupMsg',error.message,true);show('pinGate')};
+$('unlock').onclick=async()=>{const pin=$('pin').value;if(!/^\d{4}$/.test(pin))return msg('pinMsg','Geli PIN 4 lambar ah.',true);const {data,error}=await sb.rpc('verify_my_pin',{p_pin:pin});if(error||!data)return msg('pinMsg',error?.message||'PIN khaldan ama isku-dayo badan. Sug oo mar kale isku day.',true);unlocked=true;await loadApp()};
+$('logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
+async function loadApp(){show('app');$('welcome').textContent=role==='admin'?'TAMAL Admin Dashboard':role==='staff'?'TAMAL Staff Dashboard':'Ku soo dhowow TAMAL';$('roleBadge').textContent=role.toUpperCase();$('customerView').classList.toggle('hidden',false);$('adminView').classList.toggle('hidden',!['admin','staff'].includes(role));$('customerOrders').classList.toggle('hidden',['admin','staff'].includes(role));$('logout').classList.remove('hidden');await loadMyOrders();if(['admin','staff'].includes(role))await loadAdmin()}
+$('placeOrder').onclick=async()=>{const amount=Number($('amount').value);if(!amount||amount<=0)return msg('orderMsg','Geli qadar sax ah.',true);const payload={user_id:profile.id,from_asset:$('fromAsset').value,to_asset:$('toAsset').value,amount,network:$('network').value,recipient:$('recipient').value.trim(),details:$('details').value.trim(),status:'pending'};const {error}=await sb.from('orders').insert(payload);if(error)return msg('orderMsg',error.message,true);msg('orderMsg','Dalabka waa la gudbiyey. Waxaad xaaladdiisa ka arki kartaa dashboard-ka.');$('amount').value='';$('recipient').value='';$('details').value='';await loadMyOrders();if(['admin','staff'].includes(role))await loadAdmin()};
+function badge(s){return `<span class="status">${s}</span>`}
+async function loadMyOrders(){const {data,error}=await sb.from('orders').select('*').order('created_at',{ascending:false}).limit(100);if(error)return;const mine=data.filter(x=>x.user_id===profile.id);$('myOrders').innerHTML=mine.map(o=>`<tr><td>${new Date(o.created_at).toLocaleString()}</td><td>${o.amount} ${o.from_asset}</td><td>${o.to_asset}</td><td>${o.amount}</td><td>${badge(o.status)}</td><td>${o.admin_note||''}</td></tr>`).join('')||'<tr><td colspan="6">Weli dalab ma lihid.</td></tr>'}
+async function loadAdmin(){const {data:orders}=await sb.from('orders').select('*').order('created_at',{ascending:false}).limit(300);const rows=orders||[];$('stats').innerHTML=[['Dalab guud',rows.length],['Sugaya',rows.filter(x=>x.status==='pending').length],['Dhammaystiran',rows.filter(x=>x.status==='completed').length]].map(([a,b])=>`<div class="stat">${a}<b>${b}</b></div>`).join('');const ids=[...new Set(rows.map(x=>x.user_id))];let profs=[];if(ids.length){const r=await sb.from('profiles').select('id,email').in('id',ids);profs=r.data||[]}const em=id=>profs.find(p=>p.id===id)?.email||id.slice(0,8);$('ordersBody').innerHTML=rows.map(o=>`<tr><td>${new Date(o.created_at).toLocaleString()}</td><td>${em(o.user_id)}</td><td>${o.amount} ${o.from_asset}</td><td>${o.to_asset}</td><td>${o.amount}</td><td>${o.status}</td><td><div class="actions"><button data-status="processing" data-id="${o.id}">Processing</button><button class="green" data-status="completed" data-id="${o.id}">Completed</button><button class="secondary" data-status="rejected" data-id="${o.id}">Reject</button></div></td></tr>`).join('')||'<tr><td colspan="7">Dalab ma jiro.</td></tr>';
+document.querySelectorAll('[data-status]').forEach(b=>b.onclick=async()=>{const note=prompt('Qoraal macmiilku arki karo (ikhtiyaari):')||'';const {error}=await sb.from('orders').update({status:b.dataset.status,admin_note:note,updated_at:new Date().toISOString()}).eq('id',b.dataset.id);if(error)alert(error.message);else await loadAdmin()});
+await loadRates();await loadUsers()}
+document.querySelectorAll('[data-admin]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-admin]').forEach(x=>x.classList.toggle('active',x===b));['orders','rates','users'].forEach(x=>$('admin'+x[0].toUpperCase()+x.slice(1)).classList.toggle('hidden',x!==b.dataset.admin))});
+$('saveRate').onclick=async()=>{const obj={from_asset:$('rateFrom').value,to_asset:$('rateTo').value,rate:Number($('rateValue').value),fee_percent:Number($('feeValue').value)||0};if(!obj.rate||obj.rate<=0)return alert('Geli rate sax ah');const {error}=await sb.from('exchange_rates').upsert(obj,{onConflict:'from_asset,to_asset'});if(error)alert(error.message);else loadRates()};
+async function loadRates(){const {data,error}=await sb.from('exchange_rates').select('*').order('from_asset');if(error)return;$('ratesBody').innerHTML=(data||[]).map(r=>`<tr><td>${r.from_asset}</td><td>${r.to_asset}</td><td>${r.rate}</td><td>${r.fee_percent}%</td><td>${new Date(r.updated_at).toLocaleString()}</td></tr>`).join('')||'<tr><td colspan="5">Weli rates lama gelin.</td></tr>'}
+async function loadUsers(){const {data,error}=await sb.from('profiles').select('id,email,role,created_at').order('created_at',{ascending:false}).limit(200);if(error)return;$('usersBody').innerHTML=(data||[]).map(u=>`<tr><td>${u.email||u.id}</td><td>${u.role}</td><td>${new Date(u.created_at).toLocaleDateString()}</td></tr>`).join('')}
+$('setRole').onclick=async()=>{const {error}=await sb.rpc('admin_set_user_role',{p_email:$('staffEmail').value.trim(),p_role:$('staffRole').value});if(error)return msg('userMsg',error.message,true);msg('userMsg','Role-ka waa la cusboonaysiiyey.');await loadUsers()};
+init();
+</script>
+</body></html>
